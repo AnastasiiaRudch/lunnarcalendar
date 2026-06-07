@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Місячний Календар: Символи, Фази та Енергія Дня</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Uncial+Antiqua&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #060918;
+    --bg-mid: #0d1535;
+    --nebula-1: #1a0a3a;
+    --nebula-2: #0a1a3a;
+    --gold: #c8a84b;
+    --gold-light: #f0d080;
+    --silver: #a8b8d0;
+    --silver-light: #d8e8f8;
+    --moon-new: #1a2040;
+    --moon-waxing: #4a6090;
+    --moon-full: #f0e8c0;
+    --moon-waning: #6070a0;
+    --accent-rose: #c87090;
+    --accent-teal: #40a0b0;
+    --accent-purple: #8060c0;
+    --text-main: #e8e0d0;
+    --text-dim: #90a0b8;
+    --danger: #e06060;
+    --success: #60c080;
+    --card-bg: rgba(15,20,50,0.85);
+    --card-border: rgba(200,168,75,0.25);
+    --glow: rgba(200,168,75,0.15);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-main);
+    font-family: 'Cormorant Garamond', serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated starfield background */
+  #starfield {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 20% 30%, #1a0a2a 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, #0a1a2a 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, #060918 0%, #020510 100%);
+  }
+  #starfield canvas { position:absolute; inset:0; }
+
+  .app-wrapper { position: relative; z-index: 1; }
+
+  /* ── HEADER ── */
+  .site-header {
+    text-align: center;
+    padding: 48px 20px 32px;
+    position: relative;
+  }
+  .site-header::after {
+    content: '';
+    display: block;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin-top: 32px;
+  }
+  .site-title {
+    font-family: 'Cinzel Decorative', cursive;
+    font-size: clamp(1.4rem, 4vw, 2.8rem);
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--silver-light));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.3;
+    letter-spacing: 0.05em;
+    text-shadow: none;
+    filter: drop-shadow(0 0 20px rgba(200,168,75,0.4));
+  }
+  .site-subtitle {
+    font-size: 1rem;
+    color: var(--text-dim);
+    font-style: italic;
+    margin-top: 8px;
+    letter-spacing: 0.15em;
+  }
+
+  /* ── CONTROLS ── */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+    padding: 24px 20px;
+    background: rgba(10,15,40,0.6);
+    border-bottom: 1px solid var(--card-border);
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(16px);
+  }
+
+  .ctrl-group {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .ctrl-label {
+    font-size: 0.75rem; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.15em;
+  }
+
+  select, input[type="number"] {
+    background: rgba(20,30,70,0.8);
+    border: 1px solid var(--card-border);
+    color: var(--text-main);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1rem;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  select:hover, input[type="number"]:hover {
+    border-color: var(--gold);
+    box-shadow: 0 0 8px var(--glow);
+  }
+  select option { background: #0d1535; }
+
+  .btn {
+    background: linear-gradient(135deg, rgba(200,168,75,0.15), rgba(200,168,75,0.05));
+    border: 1px solid var(--gold);
+    color: var(--gold-light);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.9rem;
+    padding: 7px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    transition: all 0.2s;
+  }
+  .btn:hover {
+    background: linear-gradient(135deg, rgba(200,168,75,0.3), rgba(200,168,75,0.1));
+    box-shadow: 0 0 16px var(--glow);
+    transform: translateY(-1px);
+  }
+  .btn.active {
+    background: linear-gradient(135deg, rgba(200,168,75,0.35), rgba(200,168,75,0.15));
+    box-shadow: 0 0 20px rgba(200,168,75,0.3);
+  }
+
+  /* ── MONTH DISPLAY ── */
+  .month-header {
+    text-align: center;
+    padding: 32px 20px 16px;
+  }
+  .month-title {
+    font-family: 'Cinzel Decorative', cursive;
+    font-size: clamp(1.2rem, 3vw, 2rem);
+    color: var(--gold-light);
+    letter-spacing: 0.1em;
+  }
+  .month-nav {
+    display: flex; align-items: center; justify-content: center; gap: 20px;
+    margin-top: 12px;
+  }
+  .nav-btn {
+    background: none; border: 1px solid var(--card-border);
+    color: var(--silver); cursor: pointer;
+    width: 36px; height: 36px; border-radius: 50%;
+    font-size: 1.2rem; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .nav-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* ── LUNAR INFO BANNER ── */
+  .moon-banner {
+    display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;
+    padding: 16px 20px;
+    background: rgba(10,15,40,0.5);
+    border-top: 1px solid var(--card-border);
+    border-bottom: 1px solid var(--card-border);
+    margin-bottom: 24px;
+  }
+  .moon-stat {
+    text-align: center;
+    min-width: 100px;
+  }
+  .moon-stat-val {
+    font-size: 1.3rem;
+    color: var(--gold-light);
+    font-weight: 600;
+  }
+  .moon-stat-lbl {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  /* ── CALENDAR GRID ── */
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    padding: 0 12px 12px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .weekday-header {
+    text-align: center;
+    padding: 8px;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-family: 'Cinzel Decorative', cursive;
+  }
+
+  .day-cell {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 8px 6px;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    min-height: 130px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    overflow: hidden;
+  }
+  .day-cell::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, var(--glow), transparent 70%);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .day-cell:hover::before { opacity: 1; }
+  .day-cell:hover {
+    border-color: var(--gold);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 12px var(--glow);
+    z-index: 10;
+  }
+  .day-cell.empty { background: transparent; border-color: transparent; cursor: default; }
+  .day-cell.empty:hover { transform: none; box-shadow: none; }
+  .day-cell.today {
+    border-color: var(--gold);
+    box-shadow: 0 0 20px rgba(200,168,75,0.25);
+  }
+  .day-cell.selected {
+    border-color: var(--accent-rose);
+    box-shadow: 0 0 20px rgba(200,112,144,0.3);
+  }
+
+  .greg-date {
+    font-size: 0.75rem; color: var(--text-dim);
+    align-self: flex-end;
+    font-family: 'Cormorant Garamond', serif;
+  }
+  .moon-phase-icon {
+    font-size: 1.6rem; line-height: 1;
+    filter: drop-shadow(0 0 6px rgba(200,220,255,0.4));
+  }
+  .lunar-day-num {
+    font-family: 'Cinzel Decorative', cursive;
+    font-size: 0.7rem;
+    color: var(--gold);
+    letter-spacing: 0.05em;
+  }
+  .symbol-icon { font-size: 1.5rem; line-height: 1; }
+  .symbol-name {
+    font-size: 0.6rem;
+    color: var(--silver);
+    text-align: center;
+    line-height: 1.2;
+    font-style: italic;
+  }
+  .zodiac-sign {
+    font-size: 1rem;
+    color: var(--accent-teal);
+    filter: drop-shadow(0 0 4px rgba(64,160,176,0.5));
+  }
+  .moon-time {
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    text-align: center;
+    line-height: 1.4;
+  }
+  .moon-time span { color: var(--silver-light); }
+
+  /* Phase color tints */
+  .phase-new .moon-phase-icon { color: #8090c0; }
+  .phase-waxing-crescent .moon-phase-icon { color: #90a8d0; }
+  .phase-first-quarter .moon-phase-icon { color: #a0c0e0; }
+  .phase-waxing-gibbous .moon-phase-icon { color: #c0d8f0; }
+  .phase-full .moon-phase-icon { color: #f0e8c0; filter: drop-shadow(0 0 8px rgba(240,232,192,0.6)); }
+  .phase-waning-gibbous .moon-phase-icon { color: #d0d0e0; }
+  .phase-last-quarter .moon-phase-icon { color: #a0a8c0; }
+  .phase-waning-crescent .moon-phase-icon { color: #8088b0; }
+
+  /* ── DETAIL PANEL ── */
+  .detail-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,5,0.85);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+    backdrop-filter: blur(8px);
+  }
+  .detail-overlay.open { opacity: 1; pointer-events: all; }
+
+  .detail-panel {
+    background: linear-gradient(135deg, rgba(10,15,50,0.98), rgba(20,10,50,0.98));
+    border: 1px solid var(--gold);
+    border-radius: 20px;
+    padding: 36px;
+    max-width: 500px;
+    width: 90%;
+    position: relative;
+    box-shadow: 0 0 80px rgba(200,168,75,0.15), 0 40px 80px rgba(0,0,0,0.8);
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .detail-overlay.open .detail-panel {
+    transform: scale(1) translateY(0);
+  }
+
+  .detail-close {
+    position: absolute; top: 16px; right: 16px;
+    background: none; border: 1px solid var(--card-border);
+    color: var(--text-dim); cursor: pointer;
+    width: 32px; height: 32px; border-radius: 50%;
+    font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .detail-close:hover { border-color: var(--danger); color: var(--danger); }
+
+  .detail-date {
+    font-family: 'Cinzel Decorative', cursive;
+    font-size: 1rem; color: var(--gold); text-align: center; margin-bottom: 20px;
+  }
+
+  .detail-symbol-row {
+    display: flex; align-items: center; gap: 16px;
+    background: rgba(200,168,75,0.06);
+    border: 1px solid var(--card-border);
+    border-radius: 12px; padding: 16px; margin-bottom: 16px;
+  }
+  .detail-icon { font-size: 3.5rem; }
+  .detail-symbol-info { flex: 1; }
+  .detail-lunar-num {
+    font-family: 'Cinzel Decorative', cursive;
+    font-size: 1.8rem; color: var(--gold-light);
+  }
+  .detail-symbol-title {
+    font-size: 1.2rem; color: var(--silver-light);
+    font-style: italic; margin-top: 2px;
+  }
+  .detail-phase { font-size: 0.8rem; color: var(--text-dim); margin-top: 4px; }
+
+  .detail-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;
+  }
+  .detail-item {
+    background: rgba(200,168,75,0.04);
+    border: 1px solid rgba(200,168,75,0.12);
+    border-radius: 8px; padding: 10px;
+    text-align: center;
+  }
+  .detail-item-val { font-size: 1.1rem; color: var(--silver-light); }
+  .detail-item-lbl { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.12em; margin-top: 2px; }
+
+  .detail-desc {
+    font-size: 0.9rem; color: var(--text-dim); line-height: 1.6;
+    border-top: 1px solid var(--card-border); padding-top: 14px;
+    text-align: center; font-style: italic;
+  }
+  .detail-category {
+    display: inline-block; margin-top: 8px;
+    font-size: 0.75rem; padding: 3px 12px;
+    border-radius: 20px; letter-spacing: 0.1em;
+  }
+  .cat-money { background: rgba(96,192,128,0.15); border: 1px solid rgba(96,192,128,0.4); color: #60c080; }
+  .cat-spirit { background: rgba(128,96,192,0.15); border: 1px solid rgba(128,96,192,0.4); color: #a080e0; }
+  .cat-love { background: rgba(200,112,144,0.15); border: 1px solid rgba(200,112,144,0.4); color: #e080a0; }
+  .cat-clean { background: rgba(64,160,176,0.15); border: 1px solid rgba(64,160,176,0.4); color: #60d0e0; }
+  .cat-danger { background: rgba(224,96,96,0.15); border: 1px solid rgba(224,96,96,0.4); color: #e07070; }
+  .cat-protect { background: rgba(176,140,80,0.15); border: 1px solid rgba(176,140,80,0.4); color: #d0a860; }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
+    padding: 20px; max-width: 900px; margin: 0 auto 24px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.75rem; color: var(--text-dim);
+  }
+
+  /* ── PHASE TIMELINE ── */
+  .phase-timeline {
+    padding: 16px 20px;
+    max-width: 1400px; margin: 0 auto 20px;
+    background: rgba(10,15,40,0.5);
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+  }
+  .timeline-title {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.15em;
+    color: var(--text-dim); margin-bottom: 10px; text-align: center;
+  }
+  .timeline-bar {
+    display: flex; height: 8px; border-radius: 4px; overflow: hidden;
+    border: 1px solid rgba(200,168,75,0.2);
+  }
+  .timeline-seg { transition: opacity 0.2s; cursor: pointer; }
+  .timeline-seg:hover { opacity: 0.8; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-deep); }
+  ::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+  /* Loading */
+  .loading {
+    text-align: center; padding: 60px; color: var(--text-dim);
+    font-style: italic; font-size: 1.1rem;
+  }
+  @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+  .loading { animation: pulse 1.5s infinite; }
+
+  @media (max-width: 700px) {
+    .calendar-grid { grid-template-columns: repeat(7, 1fr); gap: 1px; padding: 0 4px; }
+    .day-cell { min-height: 80px; padding: 4px 2px; }
+    .symbol-icon { font-size: 1.1rem; }
+    .moon-phase-icon { font-size: 1.2rem; }
+    .symbol-name, .moon-time, .zodiac-sign { display: none; }
+    .lunar-day-num { font-size: 0.55rem; }
+  }
+</style>
+</head>
+<body>
+
+<div id="starfield"><canvas id="stars"></canvas></div>
+
+<div class="app-wrapper">
+
+  <header class="site-header">
+    <h1 class="site-title">🌙 Повний Місячний Календар<br>Символи, Фази та Енергія Дня</h1>
+    <p class="site-subtitle">Хронологічна послідовність місячного циклу • Україна • 1907–2077</p>
+  </header>
+
+  <div class="controls">
+    <div class="ctrl-group">
+      <span class="ctrl-label">Рік</span>
+      <input type="number" id="yearInput" min="1907" max="2077" value="2024" style="width:90px;">
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">Місяць</span>
+      <select id="monthSelect"></select>
+    </div>
+    <button class="btn" onclick="goToday()">📅 Сьогодні</button>
+    <button class="btn" onclick="prevMonth()">◀ Назад</button>
+    <button class="btn" onclick="nextMonth()">Вперед ▶</button>
+  </div>
+
+  <div id="calendarContainer">
+    <div class="loading">Завантаження астрономічних даних...</div>
+  </div>
+
+  <div class="detail-overlay" id="detailOverlay">
+    <div class="detail-panel">
+      <button class="detail-close" onclick="closeDetail()">✕</button>
+      <div id="detailContent"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  STARFIELD ANIMATION
+// ═══════════════════════════════════════════════════════
+(function() {
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  function initStars() {
+    stars = [];
+    for (let i = 0; i < 200; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.5 + 0.3,
+        a: Math.random(),
+        da: (Math.random() - 0.5) * 0.008,
+        speed: Math.random() * 0.015
+      });
+    }
+  }
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      s.a += s.da;
+      if (s.a <= 0 || s.a >= 1) s.da *= -1;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(200,220,255,${s.a})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', () => { resize(); initStars(); });
+  resize(); initStars(); draw();
+})();
+
+// ═══════════════════════════════════════════════════════
+//  LUNAR SYMBOLS DATA (30 lunar days)
+// ═══════════════════════════════════════════════════════
+const LUNAR_DAYS = [
+  { num:1,  name:'Світильник',     icon:'🪔', cat:'spirit',  desc:'Важіння, обмірковування, плани. День починань і нових задумів.' },
+  { num:2,  name:'Ріг Достатку',  icon:'🦌', cat:'money',   desc:'Трансформація, зачаття, нові справи. Матеріальний добробут.' },
+  { num:3,  name:'Барс',           icon:'🐆', cat:'clean',   desc:'Сконея магія, очищення, метал. Очищення від негативу.' },
+  { num:4,  name:'Дерево Життя',  icon:'🌳', cat:'money',   desc:'Рід, карма, фінанси, керівництво. Зв\'язок з предками.' },
+  { num:5,  name:'Єдиноріг',      icon:'🦄', cat:'spirit',  desc:'Плани, чари, алхімія. День магічних перетворень.' },
+  { num:6,  name:'Журавель',      icon:'🦢', cat:'spirit',  desc:'Вирівнювання, аремоти, прощення. Духовне очищення.' },
+  { num:7,  name:'Гухона',        icon:'🌙', cat:'money',   desc:'Плани, чари, аквабоки. Místisм і нові горизонти.' },
+  { num:8,  name:'Жезл / Півень', icon:'🐓', cat:'money',   desc:'Трансформації, чищення, зміни. Ранок нових можливостей.' },
+  { num:9,  name:'Фенікс',        icon:'🦅', cat:'clean',   desc:'Спіритизм, темна магія. Відродження і трансформація.' },
+  { num:10, name:'Фонтан / Туз Чаш', icon:'⛲', cat:'money', desc:'Рід, час, нерухомість, ініціації. Потік достатку.' },
+  { num:11, name:'Корона',        icon:'👑', cat:'money',   desc:'Воєнна енергія, земні духи, гроші. День влади.' },
+  { num:12, name:'Чаша',          icon:'🏆', cat:'spirit',  desc:'Відпочивок, цілительство, молитва. Духовна наповненість.' },
+  { num:13, name:'Чаша (Блакитна)', icon:'💎', cat:'money', desc:'Блакитна енергія, хихалинь, гроші. Мрії та вдача.' },
+  { num:14, name:'Нагіо',         icon:'🎵', cat:'money',   desc:'Вся магія, бажання, борги. Найсильніший день магії.' },
+  { num:15, name:'Труба',         icon:'🎺', cat:'spirit',  desc:'Астрологічний, найкращий. Духовний пік місяця.' },
+  { num:16, name:'Голуб / Зірка', icon:'🕊️', cat:'spirit',  desc:'Чистота, час, подорожі, спорт. Легкість і свобода.' },
+  { num:17, name:'Виноградна Гроно', icon:'🍇', cat:'love', desc:'Кохання, радість, бажання. День серця і пристрасті.' },
+  { num:18, name:'Дзеркало',      icon:'🪞', cat:'danger',  desc:'Очищення, знавіснення, обережність. Небезпечний день.' },
+  { num:19, name:'Павук',         icon:'🕷️', cat:'protect', desc:'Корисна магія, Пентограма. День захисної магії.' },
+  { num:20, name:'Орел',          icon:'🦅', cat:'clean',   desc:'Чищення астралу, трансформація. Орлиний політ духу.' },
+  { num:21, name:'Коліснич / Пегас', icon:'🐉', cat:'money', desc:'Кар\'єра, спорт, магія хвороби. Динамічна енергія.' },
+  { num:22, name:'Сувій / Ганеша', icon:'📜', cat:'spirit', desc:'Слово, колажі, вирожіння, хребет. Мудрість і знання.' },
+  { num:23, name:'Крокодил',      icon:'🐊', cat:'protect', desc:'Силова магія, боротьба, захист. Хижа сила природи.' },
+  { num:24, name:'Ведмідь',       icon:'🐻', cat:'money',   desc:'Нові початки, інвестиції, зачаття. Потужна земна сила.' },
+  { num:25, name:'Черепаха',      icon:'🐢', cat:'spirit',  desc:'Спокій, роздуми, розтогожіння. Повільна мудрість.' },
+  { num:26, name:'Жаба',          icon:'🐸', cat:'danger',  desc:'Відпочинок, нікому не вірити. День небезпеки.' },
+  { num:27, name:'Тризуб',        icon:'🔱', cat:'spirit',  desc:'Чак, харив, сновидіння, визнання. Сила трьох.' },
+  { num:28, name:'Лотос',         icon:'🪷', cat:'spirit',  desc:'Тільки добре, білe магія, підсумки. Чистота лотосу.' },
+  { num:29, name:'Спрут',         icon:'🐙', cat:'clean',   desc:'Аскеза, розставання, чищення. Звільнення від зайвого.' },
+  { num:30, name:'Лебідь',        icon:'🦢', cat:'spirit',  desc:'Завершення, вища космічна сна. Краса завершення.' },
+];
+
+// ═══════════════════════════════════════════════════════
+//  ZODIAC DATA
+// ═══════════════════════════════════════════════════════
+const ZODIAC = [
+  { name:'Овен',      icon:'♈', days: 1.0 },
+  { name:'Телець',    icon:'♉', days: 1.0 },
+  { name:'Близнюки',  icon:'♊', days: 1.0 },
+  { name:'Рак',       icon:'♋', days: 1.0 },
+  { name:'Лев',       icon:'♌', days: 1.0 },
+  { name:'Діва',      icon:'♍', days: 1.0 },
+  { name:'Терези',    icon:'♎', days: 1.0 },
+  { name:'Скорпіон',  icon:'♏', days: 1.0 },
+  { name:'Стрілець',  icon:'♐', days: 1.0 },
+  { name:'Козеріг',   icon:'♑', days: 1.0 },
+  { name:'Водолій',   icon:'♒', days: 1.0 },
+  { name:'Риби',      icon:'♓', days: 1.0 },
+];
+
+const MONTH_NAMES_UK = [
+  'Січень','Лютий','Березень','Квітень','Травень','Червень',
+  'Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'
+];
+const WEEKDAYS_UK = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
+
+// ═══════════════════════════════════════════════════════
+//  ASTRONOMICAL CALCULATIONS
+// ═══════════════════════════════════════════════════════
+
+// Julian Day Number from calendar date
+function toJD(year, month, day, hour=12) {
+  if (month <= 2) { year--; month += 12; }
+  const A = Math.floor(year / 100);
+  const B = 2 - A + Math.floor(A / 4);
+  return Math.floor(365.25 * (year + 4716)) + Math.floor(30.6001 * (month + 1)) + day + hour/24 + B - 1524.5;
+}
+
+// Moon phase calculation (returns 0-1, 0=new, 0.5=full)
+function moonPhase(jd) {
+  const k0 = (jd - 2451550.1) / 29.530588853;
+  return k0 - Math.floor(k0);
+}
+
+// Lunar day calculation (1-30)
+// Returns {lunarDay, newMoonJD, prevNewMoonJD}
+function getLunarInfo(year, month, day) {
+  const jd = toJD(year, month, day, 12);
+  const phase = moonPhase(jd);
+  // Synodic month
+  const synodicMonth = 29.530588853;
+  // Days since new moon
+  const daysSinceNew = phase * synodicMonth;
+  // Lunar day (1-based, changes at moonrise ~18:00 local)
+  const lunarDay = Math.floor(daysSinceNew) + 1;
+  const prevNewMoonJD = jd - daysSinceNew;
+  return {
+    phase,
+    lunarDay: Math.min(lunarDay, 30),
+    daysSinceNew,
+    prevNewMoonJD,
+    jd
+  };
+}
+
+// Get phase name
+function getPhaseName(phase) {
+  const p = phase;
+  if (p < 0.033) return { name: 'Новий Місяць', icon: '🌑', cls: 'phase-new' };
+  if (p < 0.25)  return { name: 'Молодий Місяць', icon: '🌒', cls: 'phase-waxing-crescent' };
+  if (p < 0.283) return { name: 'Перша Чверть', icon: '🌓', cls: 'phase-first-quarter' };
+  if (p < 0.5)   return { name: 'Зростаючий', icon: '🌔', cls: 'phase-waxing-gibbous' };
+  if (p < 0.533) return { name: 'Повний Місяць', icon: '🌕', cls: 'phase-full' };
+  if (p < 0.75)  return { name: 'Спадаючий', icon: '🌖', cls: 'phase-waning-gibbous' };
+  if (p < 0.783) return { name: 'Остання Чверть', icon: '🌗', cls: 'phase-last-quarter' };
+  return { name: 'Старий Місяць', icon: '🌘', cls: 'phase-waning-crescent' };
+}
+
+// Get moon zodiac sign (approximate)
+// Moon moves ~13.17° per day, full zodiac 360° in 27.32 days
+function getMoonZodiac(jd) {
+  // Reference: Moon in Aries on J2000.0 (JD 2451545.0) at ~318° ecliptic lon
+  const refJD = 2451545.0;
+  const moonLon0 = 218.316; // approximate Moon lon at J2000
+  const meanMotion = 13.176396; // degrees/day
+  let lon = (moonLon0 + meanMotion * (jd - refJD)) % 360;
+  if (lon < 0) lon += 360;
+  const idx = Math.floor(lon / 30) % 12;
+  return ZODIAC[idx];
+}
+
+// Moonrise/moonset for Kyiv (lat 50.45, lon 30.52), UTC+2 (UTC+3 in summer)
+// Simplified calculation
+function getMoonTimes(year, month, day) {
+  const info = getLunarInfo(year, month, day);
+  const { phase, daysSinceNew } = info;
+  // Moon rises ~50 minutes later each day than the day before
+  // New moon rises at sunrise (~6:00), full moon rises at sunset (~20:00)
+  // Base: at new moon, moonrise ≈ 6:00, moonset ≈ 18:00
+  const baseRiseHour = 6.0 + (daysSinceNew / 29.53) * 24 * 0.9;
+  let riseHour = baseRiseHour % 24;
+  let setHour = (riseHour + 12.5) % 24;
+
+  // Determine if summer time (roughly last Sun Mar to last Sun Oct)
+  const date = new Date(year, month-1, day);
+  const tz = isUkraineSummerTime(year, month, day) ? 3 : 2;
+
+  // Add timezone offset
+  riseHour = (riseHour + tz) % 24;
+  setHour = (setHour + tz) % 24;
+
+  return {
+    rise: formatTime(riseHour),
+    set: formatTime(setHour)
+  };
+}
+
+function isUkraineSummerTime(year, month, day) {
+  // Last Sunday of March to last Sunday of October
+  if (month > 3 && month < 10) return true;
+  if (month < 3 || month > 10) return false;
+  const d = new Date(year, month-1, day);
+  if (month === 3) {
+    const lastSun = getLastSunday(year, 3);
+    return day >= lastSun;
+  }
+  if (month === 10) {
+    const lastSun = getLastSunday(year, 10);
+    return day < lastSun;
+  }
+  return false;
+}
+
+function getLastSunday(year, month) {
+  const d = new Date(year, month, 0); // last day of month
+  while (d.getDay() !== 0) d.setDate(d.getDate()-1);
+  return d.getDate();
+}
+
+function formatTime(h) {
+  const hh = Math.floor(h) % 24;
+  const mm = Math.floor((h % 1) * 60);
+  return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  CALENDAR STATE
+// ═══════════════════════════════════════════════════════
+const today = new Date();
+let currentYear = today.getFullYear();
+let currentMonth = today.getMonth() + 1; // 1-based
+let selectedDay = null;
+
+// ═══════════════════════════════════════════════════════
+//  UI INIT
+// ═══════════════════════════════════════════════════════
+function initControls() {
+  const sel = document.getElementById('monthSelect');
+  MONTH_NAMES_UK.forEach((m, i) => {
+    const opt = document.createElement('option');
+    opt.value = i + 1;
+    opt.textContent = m;
+    sel.appendChild(opt);
+  });
+  sel.value = currentMonth;
+  document.getElementById('yearInput').value = currentYear;
+
+  sel.addEventListener('change', () => { currentMonth = +sel.value; renderCalendar(); });
+  document.getElementById('yearInput').addEventListener('change', e => {
+    let v = parseInt(e.target.value);
+    if (v < 1907) v = 1907;
+    if (v > 2077) v = 2077;
+    e.target.value = v;
+    currentYear = v;
+    renderCalendar();
+  });
+}
+
+function goToday() {
+  const now = new Date();
+  currentYear = now.getFullYear();
+  currentMonth = now.getMonth()+1;
+  document.getElementById('yearInput').value = currentYear;
+  document.getElementById('monthSelect').value = currentMonth;
+  renderCalendar();
+}
+
+function prevMonth() {
+  currentMonth--;
+  if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+  if (currentYear < 1907) { currentYear = 1907; currentMonth = 1; }
+  document.getElementById('yearInput').value = currentYear;
+  document.getElementById('monthSelect').value = currentMonth;
+  renderCalendar();
+}
+
+function nextMonth() {
+  currentMonth++;
+  if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+  if (currentYear > 2077) { currentYear = 2077; currentMonth = 12; }
+  document.getElementById('yearInput').value = currentYear;
+  document.getElementById('monthSelect').value = currentMonth;
+  renderCalendar();
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER CALENDAR
+// ═══════════════════════════════════════════════════════
+function getDaysInMonth(year, month) {
+  return new Date(year, month, 0).getDate();
+}
+
+function getFirstDayOfWeek(year, month) {
+  // 0=Sun, 1=Mon... convert to Mon-based (0=Mon)
+  const d = new Date(year, month-1, 1).getDay();
+  return (d + 6) % 7; // Mon=0, ..., Sun=6
+}
+
+// Compute moon stats for the month
+function getMonthMoonStats(year, month) {
+  const days = getDaysInMonth(year, month);
+  let newMoons = [], fullMoons = [];
+  for (let d = 1; d <= days; d++) {
+    const info = getLunarInfo(year, month, d);
+    if (info.phase < 0.033 || info.phase > 0.97) newMoons.push(d);
+    if (info.phase > 0.47 && info.phase < 0.53) fullMoons.push(d);
+  }
+  return { newMoons, fullMoons };
+}
+
+function renderCalendar() {
+  const container = document.getElementById('calendarContainer');
+  const year = currentYear;
+  const month = currentMonth;
+  const daysInMonth = getDaysInMonth(year, month);
+  const firstDow = getFirstDayOfWeek(year, month);
+  const stats = getMonthMoonStats(year, month);
+  const isCurrentMonth = (year === today.getFullYear() && month === today.getMonth()+1);
+
+  let html = `
+    <div class="month-header">
+      <div class="month-nav">
+        <button class="nav-btn" onclick="prevMonth()">◀</button>
+        <div class="month-title">${MONTH_NAMES_UK[month-1]} ${year}</div>
+        <button class="nav-btn" onclick="nextMonth()">▶</button>
+      </div>
+    </div>
+    <div class="moon-banner">
+      <div class="moon-stat"><div class="moon-stat-val">🌑 ${stats.newMoons.length > 0 ? stats.newMoons[0] + ' ' + MONTH_NAMES_UK[month-1] : '—'}</div><div class="moon-stat-lbl">Новий Місяць</div></div>
+      <div class="moon-stat"><div class="moon-stat-val">🌕 ${stats.fullMoons.length > 0 ? stats.fullMoons[0] + ' ' + MONTH_NAMES_UK[month-1] : '—'}</div><div class="moon-stat-lbl">Повний Місяць</div></div>
+      <div class="moon-stat"><div class="moon-stat-val">${daysInMonth}</div><div class="moon-stat-lbl">Днів у місяці</div></div>
+      <div class="moon-stat"><div class="moon-stat-val">🇺🇦 UTC+${isUkraineSummerTime(year,month,15)?3:2}</div><div class="moon-stat-lbl">Часовий пояс</div></div>
+    </div>
+  `;
+
+  // Phase timeline
+  html += `<div class="phase-timeline" style="margin: 0 12px 16px; max-width:calc(100% - 24px);">
+    <div class="timeline-title">Фази місяця протягом місяця</div>
+    <div class="timeline-bar">`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const info = getLunarInfo(year, month, d);
+    const ph = info.phase;
+    const w = (100/daysInMonth).toFixed(2);
+    let color;
+    if (ph < 0.25) color = `hsl(220, 30%, ${15 + ph*4*40}%)`;
+    else if (ph < 0.5) color = `hsl(45, 50%, ${55 + (ph-0.25)*4*30}%)`;
+    else if (ph < 0.75) color = `hsl(45, 30%, ${85 - (ph-0.5)*4*30}%)`;
+    else color = `hsl(220, 25%, ${25 - (ph-0.75)*4*10}%)`;
+    html += `<div class="timeline-seg" style="width:${w}%;background:${color};" title="День ${d}: Місячний день ${info.lunarDay}"></div>`;
+  }
+  html += `</div></div>`;
+
+  // Weekday headers (Mon-Sun)
+  const wdNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+  html += `<div class="calendar-grid">`;
+  wdNames.forEach(wd => html += `<div class="weekday-header">${wd}</div>`);
+
+  // Empty cells before first day
+  for (let i = 0; i < firstDow; i++) {
+    html += `<div class="day-cell empty"></div>`;
+  }
+
+  // Day cells
+  for (let d = 1; d <= daysInMonth; d++) {
+    const lunarInfo = getLunarInfo(year, month, d);
+    const phaseInfo = getPhaseName(lunarInfo.phase);
+    const zodiac = getMoonZodiac(lunarInfo.jd);
+    const moonTimes = getMoonTimes(year, month, d);
+    const lunarDayData = LUNAR_DAYS[lunarInfo.lunarDay - 1] || LUNAR_DAYS[0];
+    const isToday = isCurrentMonth && d === today.getDate();
+    const isSelected = selectedDay && selectedDay.d === d && selectedDay.m === month && selectedDay.y === year;
+
+    const catColors = {
+      money: '#60c080', spirit: '#a080e0', love: '#e080a0',
+      clean: '#60d0e0', danger: '#e07070', protect: '#d0a860'
+    };
+    const dotColor = catColors[lunarDayData.cat] || '#888';
+
+    html += `<div class="day-cell ${phaseInfo.cls} ${isToday?'today':''} ${isSelected?'selected':''}"
+      onclick="openDetail(${d},${month},${year})"
+      title="День ${d} | Місячний день ${lunarInfo.lunarDay}: ${lunarDayData.name}">
+      <div class="greg-date">${d}</div>
+      <div class="moon-phase-icon">${phaseInfo.icon}</div>
+      <div class="lunar-day-num">🌙${lunarInfo.lunarDay}</div>
+      <div class="symbol-icon">${lunarDayData.icon}</div>
+      <div class="symbol-name">${lunarDayData.name}</div>
+      <div class="zodiac-sign" title="${zodiac.name}">${zodiac.icon}</div>
+      <div class="moon-time">↑<span>${moonTimes.rise}</span> ↓<span>${moonTimes.set}</span></div>
+      <div style="width:6px;height:6px;border-radius:50%;background:${dotColor};margin-top:2px;"></div>
+    </div>`;
+  }
+
+  // Fill remaining cells
+  const totalCells = firstDow + daysInMonth;
+  const remaining = (7 - (totalCells % 7)) % 7;
+  for (let i = 0; i < remaining; i++) {
+    html += `<div class="day-cell empty"></div>`;
+  }
+
+  html += `</div>`;
+
+  // Legend
+  html += `<div class="legend">
+    <div class="legend-item"><span>🌑</span> Новий місяць</div>
+    <div class="legend-item"><span>🌒🌔</span> Зростаючий</div>
+    <div class="legend-item"><span>🌕</span> Повний місяць</div>
+    <div class="legend-item"><span>🌖🌘</span> Спадаючий</div>
+    <div class="legend-item"><span style="color:#60c080">●</span> Гроші</div>
+    <div class="legend-item"><span style="color:#a080e0">●</span> Духовність</div>
+    <div class="legend-item"><span style="color:#e080a0">●</span> Кохання</div>
+    <div class="legend-item"><span style="color:#60d0e0">●</span> Очищення</div>
+    <div class="legend-item"><span style="color:#e07070">●</span> Небезпека</div>
+    <div class="legend-item"><span style="color:#d0a860">●</span> Захист</div>
+  </div>`;
+
+  container.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
+//  DETAIL PANEL
+// ═══════════════════════════════════════════════════════
+function openDetail(day, month, year) {
+  selectedDay = {d: day, m: month, y: year};
+  const lunarInfo = getLunarInfo(year, month, day);
+  const phaseInfo = getPhaseName(lunarInfo.phase);
+  const zodiac = getMoonZodiac(lunarInfo.jd);
+  const moonTimes = getMoonTimes(year, month, day);
+  const lunarDayData = LUNAR_DAYS[lunarInfo.lunarDay - 1] || LUNAR_DAYS[0];
+
+  const catLabels = {
+    money:'💰 Гроші та достаток', spirit:'🔮 Духовність',
+    love:'❤️ Кохання', clean:'💧 Очищення',
+    danger:'⚠️ Небезпека', protect:'🛡️ Захист'
+  };
+
+  const illumination = Math.round(Math.sin(lunarInfo.phase * Math.PI) * 100);
+
+  document.getElementById('detailContent').innerHTML = `
+    <div class="detail-date">
+      ${day} ${MONTH_NAMES_UK[month-1]} ${year} р.
+    </div>
+    <div class="detail-symbol-row">
+      <div class="detail-icon">${lunarDayData.icon}</div>
+      <div class="detail-symbol-info">
+        <div class="detail-lunar-num">${lunarInfo.lunarDay}-й місячний день</div>
+        <div class="detail-symbol-title">${lunarDayData.name}</div>
+        <div class="detail-phase">${phaseInfo.icon} ${phaseInfo.name}</div>
+      </div>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <div class="detail-item-val">${zodiac.icon} ${zodiac.name}</div>
+        <div class="detail-item-lbl">Знак зодіаку</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-item-val">${illumination}%</div>
+        <div class="detail-item-lbl">Освітленість</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-item-val">↑ ${moonTimes.rise}</div>
+        <div class="detail-item-lbl">Схід місяця</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-item-val">↓ ${moonTimes.set}</div>
+        <div class="detail-item-lbl">Захід місяця</div>
+      </div>
+    </div>
+    <div class="detail-desc">
+      ${lunarDayData.desc}
+      <br>
+      <span class="detail-category cat-${lunarDayData.cat}">${catLabels[lunarDayData.cat]}</span>
+    </div>
+  `;
+
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detailOverlay').classList.remove('open');
+  selectedDay = null;
+}
+
+document.getElementById('detailOverlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeDetail();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeDetail();
+});
+
+// ═══════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════
+initControls();
+renderCalendar();
+</script>
+</body>
+</html>
