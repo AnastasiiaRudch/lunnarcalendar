@@ -252,9 +252,14 @@
   }
 
   .greg-date {
-    font-size: 0.75rem; color: var(--text-dim);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--silver-light);
     align-self: flex-end;
-    font-family: 'Cormorant Garamond', serif;
+    font-family: 'Cinzel Decorative', cursive;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    text-shadow: 0 0 8px rgba(200,220,255,0.4);
   }
   .moon-phase-icon {
     font-size: 1.6rem; line-height: 1;
@@ -286,6 +291,26 @@
     line-height: 1.4;
   }
   .moon-time span { color: var(--silver-light); }
+
+  /* Secondary lunar day badge — compact, icon + time only */
+  .sec-badge {
+    position: absolute;
+    display: inline-flex; align-items: center; gap: 3px;
+    background: rgba(6,9,24,0.82);
+    border: 1px solid rgba(200,168,75,0.28);
+    border-radius: 20px;
+    padding: 2px 6px 2px 3px;
+    width: max-content;
+    font-size: 0.58rem;
+    white-space: nowrap;
+    backdrop-filter: blur(6px);
+    z-index: 2;
+    pointer-events: none;
+  }
+  .sec-badge.top    { top: 3px; left: 5px; }
+  .sec-badge.bottom { bottom: 3px; right: 5px; }
+  .sec-badge-icon { font-size: 0.85rem; line-height: 1; }
+  .sec-badge-time { color: var(--gold); letter-spacing: 0.03em; }
 
   /* Phase color tints */
   .phase-new .moon-phase-icon { color: #8090c0; }
@@ -447,7 +472,7 @@
 
   <header class="site-header">
     <h1 class="site-title">🌙 Повний Місячний Календар<br>Символи, Фази та Енергія Дня</h1>
-    <p class="site-subtitle">Хронологічна послідовність місячного циклу • Україна • 2026</p>
+    <p class="site-subtitle">Хронологічна послідовність місячного циклу • 1907–2077</p>
   </header>
 
   <div class="controls">
@@ -462,6 +487,18 @@
     <button class="btn" onclick="goToday()">📅 Сьогодні</button>
     <button class="btn" onclick="prevMonth()">◀ Назад</button>
     <button class="btn" onclick="nextMonth()">Вперед ▶</button>
+    <div class="ctrl-group" style="border-left:1px solid var(--card-border);padding-left:12px;margin-left:4px;">
+      <span class="ctrl-label">🌍 UTC</span>
+      <select id="utcSelect" onchange="onUtcChange()"></select>
+      <span id="utcAutoLabel" style="font-size:0.65rem;color:var(--accent-teal);letter-spacing:0.1em;">авто</span>
+    </div>
+    <div class="ctrl-group" style="border-left:1px solid var(--card-border);padding-left:12px;margin-left:4px;">
+      <span class="ctrl-label">📍 Місто</span>
+      <input type="text" id="cityInput" placeholder="Київ, Одеса, Берлін…"
+        style="width:140px;" onkeydown="if(event.key==='Enter')searchCity()">
+      <button class="btn" onclick="searchCity()" style="padding:6px 10px;">→</button>
+      <span id="cityLabel" style="font-size:0.6rem;color:var(--accent-teal);letter-spacing:0.08em;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+    </div>
   </div>
 
   <div id="calendarContainer">
@@ -522,36 +559,36 @@
 //  LUNAR SYMBOLS DATA (30 lunar days)
 // ═══════════════════════════════════════════════════════
 const LUNAR_DAYS = [
-  { num:1,  name:'Світильник',     icon:'🪔', cat:'spirit',  desc:'Важіння, обмірковування, плани. День починань і нових задумів.' },
-  { num:2,  name:'Ріг Достатку',  icon:'🦌', cat:'money',   desc:'Трансформація, зачаття, нові справи. Матеріальний добробут.' },
-  { num:3,  name:'Барс',           icon:'🐆', cat:'clean',   desc:'Сконея магія, очищення, метал. Очищення від негативу.' },
-  { num:4,  name:'Дерево Життя',  icon:'🌳', cat:'money',   desc:'Рід, карма, фінанси, керівництво. Зв\'язок з предками.' },
-  { num:5,  name:'Єдиноріг',      icon:'🦄', cat:'spirit',  desc:'Плани, чари, алхімія. День магічних перетворень.' },
-  { num:6,  name:'Журавель',      icon:'🦢', cat:'spirit',  desc:'Вирівнювання, аремоти, прощення. Духовне очищення.' },
-  { num:7,  name:'Гухона',        icon:'🌙', cat:'money',   desc:'Плани, чари, аквабоки. Místisм і нові горизонти.' },
-  { num:8,  name:'Жезл / Півень', icon:'🐓', cat:'money',   desc:'Трансформації, чищення, зміни. Ранок нових можливостей.' },
-  { num:9,  name:'Фенікс',        icon:'🦅', cat:'clean',   desc:'Спіритизм, темна магія. Відродження і трансформація.' },
-  { num:10, name:'Фонтан / Туз Чаш', icon:'⛲', cat:'money', desc:'Рід, час, нерухомість, ініціації. Потік достатку.' },
-  { num:11, name:'Корона',        icon:'👑', cat:'money',   desc:'Воєнна енергія, земні духи, гроші. День влади.' },
-  { num:12, name:'Чаша',          icon:'🏆', cat:'spirit',  desc:'Відпочивок, цілительство, молитва. Духовна наповненість.' },
-  { num:13, name:'Чаша (Блакитна)', icon:'💎', cat:'money', desc:'Блакитна енергія, хихалинь, гроші. Мрії та вдача.' },
-  { num:14, name:'Нагіо',         icon:'🎵', cat:'money',   desc:'Вся магія, бажання, борги. Найсильніший день магії.' },
-  { num:15, name:'Труба',         icon:'🎺', cat:'spirit',  desc:'Астрологічний, найкращий. Духовний пік місяця.' },
-  { num:16, name:'Голуб / Зірка', icon:'🕊️', cat:'spirit',  desc:'Чистота, час, подорожі, спорт. Легкість і свобода.' },
-  { num:17, name:'Виноградна Гроно', icon:'🍇', cat:'love', desc:'Кохання, радість, бажання. День серця і пристрасті.' },
-  { num:18, name:'Дзеркало',      icon:'🪞', cat:'danger',  desc:'Очищення, знавіснення, обережність. Небезпечний день.' },
-  { num:19, name:'Павук',         icon:'🕷️', cat:'protect', desc:'Корисна магія, Пентограма. День захисної магії.' },
-  { num:20, name:'Орел',          icon:'🦅', cat:'clean',   desc:'Чищення астралу, трансформація. Орлиний політ духу.' },
-  { num:21, name:'Коліснич / Пегас', icon:'🐉', cat:'money', desc:'Кар\'єра, спорт, магія хвороби. Динамічна енергія.' },
-  { num:22, name:'Сувій / Ганеша', icon:'📜', cat:'spirit', desc:'Слово, колажі, вирожіння, хребет. Мудрість і знання.' },
-  { num:23, name:'Крокодил',      icon:'🐊', cat:'protect', desc:'Силова магія, боротьба, захист. Хижа сила природи.' },
-  { num:24, name:'Ведмідь',       icon:'🐻', cat:'money',   desc:'Нові початки, інвестиції, зачаття. Потужна земна сила.' },
-  { num:25, name:'Черепаха',      icon:'🐢', cat:'spirit',  desc:'Спокій, роздуми, розтогожіння. Повільна мудрість.' },
-  { num:26, name:'Жаба',          icon:'🐸', cat:'danger',  desc:'Відпочинок, нікому не вірити. День небезпеки.' },
-  { num:27, name:'Тризуб',        icon:'🔱', cat:'spirit',  desc:'Чак, харив, сновидіння, визнання. Сила трьох.' },
-  { num:28, name:'Лотос',         icon:'🪷', cat:'spirit',  desc:'Тільки добре, білe магія, підсумки. Чистота лотосу.' },
-  { num:29, name:'Спрут',         icon:'🐙', cat:'clean',   desc:'Аскеза, розставання, чищення. Звільнення від зайвого.' },
-  { num:30, name:'Лебідь',        icon:'🦢', cat:'spirit',  desc:'Завершення, вища космічна сна. Краса завершення.' },
+  { num:1,  name:'Світильник / Промінь',    icon:'🪔', cat:'spirit',  desc:'Важіння, обмірковування, плани. День починань і нових задумів.' },
+  { num:2,  name:'Ріг Достатку',           icon:'🦌', cat:'money',   desc:'Трансформація, зачаття, нові справи. Матеріальний добробут.' },
+  { num:3,  name:'Барс',                    icon:'🐆', cat:'clean',   desc:'Сконея магія, очищення, метал. Очищення від негативу.' },
+  { num:4,  name:'Дерево Життя',           icon:'🌳', cat:'money',   desc:'Рід, карма, фінанси, керівництво. Зв\'язок з предками.' },
+  { num:5,  name:'Єдиноріг',               icon:'🦄', cat:'spirit',  desc:'Плани, чари, алхімія. День магічних перетворень.' },
+  { num:6,  name:'Журавель',               icon:'🪶', cat:'spirit',  desc:'Вирівнювання, аремоти, прощення. Духовне очищення.' },
+  { num:7,  name:'Жезл / Півень',          icon:'🐓', cat:'money',   desc:'Плани, чари, аяквоки. Жезл влади і нові горизонти.' },
+  { num:8,  name:'Фенікс',                 icon:'🔥', cat:'clean',   desc:'Трансформація, чищення, зміни. Відродження з попелу.' },
+  { num:9,  name:'Кажан',                  icon:'🦇', cat:'danger',  desc:'Спіритизм, темна магія, захист. День містики і тіні.' },
+  { num:10, name:'Фонтан / Туз Чаш',      icon:'⛲', cat:'money',   desc:'Рід, час, нерухомість, ініціації. Потік достатку.' },
+  { num:11, name:'Корона / Меч',           icon:'👑', cat:'money',   desc:'Воєнна енергія, земні духи, гроші. День сили та влади.' },
+  { num:12, name:'Чаша Грааля',            icon:'🏺', cat:'spirit',  desc:'Відпочивок, цілительство, молитва. Свята чаша духовності.' },
+  { num:13, name:'Колесо Сансари',         icon:'☸️', cat:'money',   desc:'Вся магія, бажання, борги. Колесо долі і карми.' },
+  { num:14, name:'Труба',                  icon:'🎺', cat:'money',   desc:'Найсприятливіший день, всі починання. Клич до дії.' },
+  { num:15, name:'Змій / Зміяка',          icon:'🐍', cat:'danger',  desc:'Астрал, привороти, Таро. Змій мудрості і небезпеки.' },
+  { num:16, name:'Голуб / Зірка',          icon:'🕊️', cat:'spirit',  desc:'Чистота, час, подорожі, спорт. Легкість і свобода.' },
+  { num:17, name:'Виноградне Гроно / Дзвін', icon:'🍇', cat:'love',  desc:'Кохання, радість, бажання. День серця, дзвін душі.' },
+  { num:18, name:'Дзеркало',               icon:'🪞', cat:'danger',  desc:'Очищення, знавіснення, обережність. Небезпечний день.' },
+  { num:19, name:'Павук',                  icon:'🕷️', cat:'protect', desc:'Корисна магія, Пентограма. День захисної магії.' },
+  { num:20, name:'Орел',                   icon:'🦅', cat:'clean',   desc:'Чищення астралу, трансформація. Орлиний політ духу.' },
+  { num:21, name:'Колісниця / Пегас (Кінь)', icon:'🐎', cat:'money', desc:'Кар\'єра, спорт, магія хвороби. Динамічна енергія руху.' },
+  { num:22, name:'Слон / Ганеша',          icon:'🐘', cat:'spirit',  desc:'Слово, колажі, верожіння, хребет. Мудрість Ганеші.' },
+  { num:23, name:'Крокодил',               icon:'🐊', cat:'protect', desc:'Силова магія, боротьба, захист. Хижа сила природи.' },
+  { num:24, name:'Ведмідь',                icon:'🐻', cat:'money',   desc:'Нові початки, інвестиції, зачаття. Потужна земна сила.' },
+  { num:25, name:'Черепаха',               icon:'🐢', cat:'spirit',  desc:'Спокій, роздуми, розтогожіння. Повільна мудрість.' },
+  { num:26, name:'Жаба',                   icon:'🐸', cat:'danger',  desc:'Відпочинок, нікому не вірити. День небезпеки.' },
+  { num:27, name:'Тризуб',                 icon:'🔱', cat:'spirit',  desc:'Чак, харив, сновидіння, визнання. Сила трьох.' },
+  { num:28, name:'Лотос',                  icon:'🪷', cat:'spirit',  desc:'Тільки добре, біле магія, підсумки. Чистота лотосу.' },
+  { num:29, name:'Спрут',                  icon:'🐙', cat:'clean',   desc:'Аскеза, розставання, чищення. Звільнення від зайвого.' },
+  { num:30, name:'Золотий Лебідь',         icon:'🦢', cat:'spirit',  desc:'Завершення, вища космічна сила. Золота краса завершення циклу.' },
 ];
 
 // ═══════════════════════════════════════════════════════
@@ -590,30 +627,147 @@ function toJD(year, month, day, hour=12) {
   return Math.floor(365.25 * (year + 4716)) + Math.floor(30.6001 * (month + 1)) + day + hour/24 + B - 1524.5;
 }
 
-// Moon phase calculation (returns 0-1, 0=new, 0.5=full)
-function moonPhase(jd) {
-  const k0 = (jd - 2451550.1) / 29.530588853;
-  return k0 - Math.floor(k0);
+// ── MEEUS ALGORITHM (Jean Meeus, "Astronomical Algorithms", Ch.49) ──
+// Accurate to within ~2 minutes for new moon times 1900-2100
+const SYNODIC = 29.530588861;
+
+function newMoonJDE(k) {
+  const T = k / 1236.85;
+  const T2 = T * T, T3 = T2 * T, T4 = T3 * T;
+  let JDE = 2451550.09766 + SYNODIC * k
+    + 0.00015437 * T2 - 0.000000150 * T3 + 0.00000000073 * T4;
+  const M  = (2.5534      + 29.10535670  * k - 0.0000014 * T2) * Math.PI / 180;
+  const Mp = (201.5643    + 385.81693528 * k + 0.0107582 * T2 + 0.00001238 * T3) * Math.PI / 180;
+  const F  = (160.7108    + 390.67050284 * k - 0.0016118 * T2 - 0.00000227 * T3) * Math.PI / 180;
+  const Om = (124.7746    - 1.56375588   * k + 0.0020672 * T2) * Math.PI / 180;
+  JDE += -0.40720*Math.sin(Mp) + 0.17241*Math.sin(M)   + 0.01608*Math.sin(2*Mp)
+       +  0.01039*Math.sin(2*F)+ 0.00739*Math.sin(Mp-M)- 0.00514*Math.sin(Mp+M)
+       +  0.00208*Math.sin(2*M)- 0.00111*Math.sin(Mp-2*F) - 0.00057*Math.sin(Mp+2*F)
+       +  0.00056*Math.sin(2*Mp+M) - 0.00042*Math.sin(3*Mp) + 0.00042*Math.sin(M+2*F)
+       +  0.00038*Math.sin(M-2*F)  - 0.00024*Math.sin(2*Mp-M) - 0.00017*Math.sin(Om)
+       -  0.00007*Math.sin(Mp+2*M) + 0.00004*Math.sin(2*Mp-2*F) + 0.00004*Math.sin(3*M)
+       +  0.00003*Math.sin(Mp+M-2*F) + 0.00003*Math.sin(2*Mp+2*F)
+       -  0.00003*Math.sin(Mp+M+2*F) + 0.00003*Math.sin(Mp-M+2*F)
+       -  0.00002*Math.sin(Mp-M-2*F) - 0.00002*Math.sin(3*Mp+M) + 0.00002*Math.sin(4*Mp);
+  return JDE;
 }
 
-// Lunar day calculation (1-30)
-// Returns {lunarDay, newMoonJD, prevNewMoonJD}
+// k index for a given JD
+function kForJD(jd) { return (jd - 2451550.09766) / SYNODIC; }
+
+// Previous new moon JDE before given JD (in UTC/TT, difference ~negligible here)
+function prevNewMoon(jd) {
+  let k = Math.floor(kForJD(jd));
+  let nm = newMoonJDE(k);
+  if (nm > jd) { k--; nm = newMoonJDE(k); }
+  // Check if next one is still before jd
+  const nmNext = newMoonJDE(k + 1);
+  if (nmNext <= jd) return nmNext;
+  return nm;
+}
+
+// Moon phase (0=new, 0.5=full, 1=new again) using Meeus new moon base
+function moonPhaseAccurate(jd) {
+  const nm = prevNewMoon(jd);
+  const daysSince = jd - nm;
+  return (daysSince % SYNODIC) / SYNODIC;
+}
+
+// ── LUNAR DAY CALCULATION (moonrise-based) ────────────────────────────────
+// Lunar day boundary = moonrise time for that calendar day (from API cache).
+// LD 1 starts at the first moonrise after the new moon.
+// Each subsequent lunar day starts at the next day's moonrise.
+//
+// For a calendar day (00:00–23:59):
+//   before moonrise = previous lunar day
+//   after moonrise  = new lunar day
+// mainLD = whichever occupies more hours.
+
+function _timeStrToHours(t) {
+  // "HH:MM" → decimal hours, null → null
+  if (!t || t === '—' || t === '…') return null;
+  const [h, m] = t.split(':').map(Number);
+  return h + m / 60;
+}
+
+function _daysSinceToLD(d) {
+  if (d < 0) return Math.min(Math.max(Math.floor(SYNODIC + d) + 1, 1), 30);
+  return Math.min(Math.max(Math.floor(d) + 1, 1), 30);
+}
+
 function getLunarInfo(year, month, day) {
-  const jd = toJD(year, month, day, 12);
-  const phase = moonPhase(jd);
-  // Synodic month
-  const synodicMonth = 29.530588853;
-  // Days since new moon
-  const daysSinceNew = phase * synodicMonth;
-  // Lunar day (1-based, changes at moonrise ~18:00 local)
-  const lunarDay = Math.floor(daysSinceNew) + 1;
-  const prevNewMoonJD = jd - daysSinceNew;
+  const tz = getEffectiveTZ(year, month, day);
+
+  // Meeus new moon for phase calculations
+  const jdNoon = toJD(year, month, day, 12 - tz);
+  const nm = prevNewMoon(toJD(year, month, day, 23.9 - tz));
+  const daysSinceNew = jdNoon - nm;
+  const phase = Math.max(0, daysSinceNew % SYNODIC) / SYNODIC;
+
+  // Get moonrise from API cache for today and yesterday
+  const todayMoon = getCachedMoon(year, month, day);
+  
+  // Helper: get cached moon for date offset
+  function getMoonForOffset(offset) {
+    const d2 = new Date(year, month - 1, day + offset);
+    return getCachedMoon(d2.getFullYear(), d2.getMonth() + 1, d2.getDate());
+  }
+  const prevMoon = getMoonForOffset(-1);
+
+  // changeHour = moonrise time for today
+  const changeHour = todayMoon ? _timeStrToHours(todayMoon.rise) : null;
+
+  // ── LUNAR DAY COUNT (location-independent) ──────────────────────────
+  // Compute daysSinceNM at the exact UTC moment of today's moonrise.
+  // Same MD numbers for all cities in the same UTC zone. ✓
+  // earlyLD = floor(daysSinceNM) + 1  (runs 00:00 → moonrise)
+  // lateLD  = floor(daysSinceNM) + 2  (runs moonrise → 24:00)
+  const clamp = n => Math.min(Math.max(n, 1), 30);
+  let earlyLD, lateLD;
+  if (changeHour !== null) {
+    const moonriseUTC_h = changeHour - tz;
+    const moonriseJD    = toJD(year, month, day, 12) + (moonriseUTC_h - 12) / 24;
+    const daysSinceNM   = moonriseJD - nm;
+    earlyLD = clamp(Math.floor(daysSinceNM) + 1);
+    lateLD  = clamp(Math.floor(daysSinceNM) + 2);
+  } else {
+    // Fallback when no API data yet
+    const nmLocalJD = nm + tz / 24;
+    const nmCalDay  = Math.floor(nmLocalJD + 0.5);
+    const diff      = Math.floor(toJD(year, month, day, 12)) - nmCalDay;
+    earlyLD = clamp(diff + 1);
+    lateLD  = clamp(diff + 2);
+  }
+
+  let mainLD, secLD, mainIsFirst, earlyHours, lateHours;
+
+  if (changeHour !== null) {
+    earlyHours = changeHour;       // 00:00 → moonrise (prev lunar day)
+    lateHours  = 24 - changeHour;  // moonrise → 24:00 (new lunar day starts)
+
+    // RULE: main = whichever MD occupies MORE hours of the calendar day (majority).
+    // earlyLD runs 00:00 → moonrise (changeHour hours)
+    // lateLD  runs moonrise → 24:00 (24-changeHour hours)
+    // Majority is always unambiguous in practice because moonrise shifts ~48min/day —
+    // the two MDs never split exactly 50/50 on consecutive days at the same time.
+    mainIsFirst = earlyHours >= lateHours;  // true = earlyLD is majority
+    mainLD = mainIsFirst ? earlyLD : lateLD;
+    secLD  = mainIsFirst ? lateLD  : earlyLD;
+  } else {
+    // No API data yet — default to lateLD
+    earlyHours = 12; lateHours = 12;
+    mainIsFirst = false;
+    mainLD = lateLD;
+    secLD  = earlyLD;
+  }
+
   return {
-    phase,
-    lunarDay: Math.min(lunarDay, 30),
-    daysSinceNew,
-    prevNewMoonJD,
-    jd
+    phase, mainLD, secLD,
+    changeHour: changeHour !== null ? changeHour : null,
+    mainIsFirst, earlyLD, lateLD, earlyHours, lateHours,
+    lunarDay: mainLD,
+    daysSinceNew, prevNewMoonJD: nm, jd: jdNoon, tz,
+    fromAPI: !!todayMoon,
   };
 }
 
@@ -643,51 +797,40 @@ function getMoonZodiac(jd) {
   return ZODIAC[idx];
 }
 
-// Moonrise/moonset for Kyiv (lat 50.45, lon 30.52), UTC+2 (UTC+3 in summer)
-// Simplified calculation
+// getMoonTimes — returns cached API data or fallback
 function getMoonTimes(year, month, day) {
-  const info = getLunarInfo(year, month, day);
-  const { phase, daysSinceNew } = info;
-  // Moon rises ~50 minutes later each day than the day before
-  // New moon rises at sunrise (~6:00), full moon rises at sunset (~20:00)
-  // Base: at new moon, moonrise ≈ 6:00, moonset ≈ 18:00
-  const baseRiseHour = 6.0 + (daysSinceNew / 29.53) * 24 * 0.9;
-  let riseHour = baseRiseHour % 24;
-  let setHour = (riseHour + 12.5) % 24;
-
-  // Determine if summer time (roughly last Sun Mar to last Sun Oct)
-  const date = new Date(year, month-1, day);
-  const tz = isUkraineSummerTime(year, month, day) ? 3 : 2;
-
-  // Add timezone offset
-  riseHour = (riseHour + tz) % 24;
-  setHour = (setHour + tz) % 24;
-
-  return {
-    rise: formatTime(riseHour),
-    set: formatTime(setHour)
-  };
+  const cached = getCachedMoon(year, month, day);
+  if (cached) {
+    return {
+      rise: cached.rise || '—',
+      set:  cached.set  || '—',
+      fromAPI: true,
+      illumination: cached.illumination,
+      phaseVal: cached.phaseVal,
+    };
+  }
+  // Fallback: show dashes while loading
+  return { rise: '…', set: '…', fromAPI: false };
 }
 
-function isUkraineSummerTime(year, month, day) {
-  // Last Sunday of March to last Sunday of October
-  if (month > 3 && month < 10) return true;
-  if (month < 3 || month > 10) return false;
-  const d = new Date(year, month-1, day);
-  if (month === 3) {
-    const lastSun = getLastSunday(year, 3);
-    return day >= lastSun;
-  }
-  if (month === 10) {
-    const lastSun = getLastSunday(year, 10);
-    return day < lastSun;
-  }
-  return false;
+// ── TIMEZONE ──────────────────────────────────────────
+// userTZ: fixed offset in hours (e.g. 3 = UTC+3). null = use browser's offset.
+let userTZ = null; // set by auto-detect on load, overrideable
+
+function getBrowserTZ() {
+  // Returns UTC offset in hours for the current moment (positive = east of UTC)
+  return -new Date().getTimezoneOffset() / 60;
+}
+
+function getEffectiveTZ(year, month, day) {
+  if (userTZ !== null) return userTZ; // manual override: fixed offset, no DST adjustment
+  // Auto mode: use the browser's offset for that specific date
+  return -new Date(year, month - 1, day, 12, 0, 0).getTimezoneOffset() / 60;
 }
 
 function getLastSunday(year, month) {
-  const d = new Date(year, month, 0); // last day of month
-  while (d.getDay() !== 0) d.setDate(d.getDate()-1);
+  const d = new Date(year, month, 0);
+  while (d.getDay() !== 0) d.setDate(d.getDate() - 1);
   return d.getDate();
 }
 
@@ -705,10 +848,189 @@ let currentYear = today.getFullYear();
 let currentMonth = today.getMonth() + 1; // 1-based
 let selectedDay = null;
 
+// moonrise/moonset cache: key = "YYYY-MM-DD" -> { rise, set, moonLD }
+// moonLD = lunar day that started at this moonrise
+const moonCache = {};
+let moonCacheLoading = false;
+
+// User location (lat/lng) — detected via browser or default
+let userLat = null;
+let userLng = null;
+let userLocLabel = '';
+
+// ── LOCATION SEARCH ──────────────────────────────────────────────────────
+// Use Nominatim (OpenStreetMap) free geocoding — no key needed
+async function searchCity() {
+  const input = document.getElementById('cityInput');
+  const label = document.getElementById('cityLabel');
+  const query = (input ? input.value : '').trim();
+  if (!query) return;
+
+  label.textContent = '⏳ пошук…';
+  label.style.color = 'var(--text-dim)';
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
+    let data;
+    try {
+      const resp = await fetch(url, { headers: { 'Accept-Language': 'uk,en' }, mode: 'cors' });
+      data = await resp.json();
+    } catch(e) {
+      // file:// fallback: use OSM json-p equivalent (not available, show error)
+      label.textContent = '✗ відкрийте через http://';
+      label.style.color = 'var(--danger)';
+      return;
+    }
+    if (data && data.length > 0) {
+      userLat = parseFloat(data[0].lat).toFixed(4);
+      userLng = parseFloat(data[0].lon).toFixed(4);
+      userLocLabel = data[0].display_name.split(',').slice(0,2).join(',');
+      label.textContent = '✓ ' + userLocLabel;
+      label.style.color = 'var(--accent-teal)';
+      // Clear cache so next render fetches fresh data for new location
+      Object.keys(moonCache).forEach(k => delete moonCache[k]);
+      await renderCalendar();
+    } else {
+      label.textContent = '✗ не знайдено';
+      label.style.color = 'var(--danger)';
+    }
+  } catch(e) {
+    label.textContent = '✗ помилка';
+    label.style.color = 'var(--danger)';
+  }
+}
+
+async function detectLocation() {
+  // Try browser geolocation first
+  const geo = await new Promise(resolve => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      ()  => resolve(null),
+      { timeout: 4000 }
+    );
+  });
+
+  if (geo) {
+    userLat = geo.lat.toFixed(4);
+    userLng = geo.lng.toFixed(4);
+    // Reverse geocode to get city name
+    try {
+      let d;
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${userLat}&lon=${userLng}&format=json`, { mode: 'cors' });
+        d = await r.json();
+      } catch(e) { d = {}; }
+      userLocLabel = (d.address?.city || d.address?.town || d.address?.village || d.display_name || '').split(',')[0];
+    } catch(e) {
+      userLocLabel = `${userLat}, ${userLng}`;
+    }
+  } else {
+    // Default: Kyiv
+    userLat = 50.4501; userLng = 30.5234;
+    userLocLabel = 'Київ';
+  }
+
+  // Show in UI
+  const label = document.getElementById('cityLabel');
+  const input = document.getElementById('cityInput');
+  if (label) { label.textContent = '📍 ' + userLocLabel; label.style.color = 'var(--accent-teal)'; }
+  if (input && !input.value) input.placeholder = userLocLabel;
+}
+
+// Fetch moonrise/moonset for entire month from sunrisesunset.io
+// Returns array of { date, moonrise, moonset } in user's local timezone
+async function fetchMoonData(year, month) {
+  if (!userLat || !userLng) { userLat = 50.4501; userLng = 30.5234; }
+  const tz = getEffectiveTZ(year, month, 15);
+  const pad = n => String(n).padStart(2, '0');
+  const daysInMon = getDaysInMonth(year, month);
+  const dateStart = `${year}-${pad(month)}-01`;
+  const dateEnd   = `${year}-${pad(month)}-${pad(daysInMon)}`;
+  const baseUrl = `https://api.sunrisesunset.io/json?lat=${userLat}&lng=${userLng}` +
+    `&date_start=${dateStart}&date_end=${dateEnd}&time_format=24&timezone=UTC`;
+
+  let data = null;
+
+  try {
+    const resp = await fetch(baseUrl);
+    data = await resp.json();
+  } catch(e) {
+    // Fallback for file:// protocol: use JSONP
+    try { data = await fetchJSONP(baseUrl); } catch(e2) { return false; }
+  }
+
+  if (!data || data.status !== 'OK' || !data.results) return false;
+
+  const results = Array.isArray(data.results) ? data.results : [data.results];
+  results.forEach(r => {
+    const key = r.date;
+    moonCache[key] = {
+      rise: utcTimeToLocal(r.moonrise, r.date, tz),
+      set:  utcTimeToLocal(r.moonset,  r.date, tz),
+      riseUTC: r.moonrise,
+      setUTC:  r.moonset,
+      phase: r.moon_phase,
+      illumination: r.moon_illumination,
+      phaseVal: r.moon_phase_value,
+      moonAlwaysUp: r.moon_always_up,
+      moonAlwaysDown: r.moon_always_down,
+    };
+  });
+  return true;
+}
+
+// JSONP fallback for file:// protocol (injects <script> tag)
+function fetchJSONP(url) {
+  return new Promise((resolve, reject) => {
+    const cbName = '_moonCb_' + Date.now();
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('JSONP timeout'));
+    }, 10000);
+
+    function cleanup() {
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      clearTimeout(timeout);
+    }
+
+    window[cbName] = function(data) {
+      cleanup();
+      resolve(data);
+    };
+
+    script.src = url + '&callback=' + cbName;
+    script.onerror = () => { cleanup(); reject(new Error('JSONP error')); };
+    document.head.appendChild(script);
+  });
+}
+
+// Convert "HH:MM:SS" UTC time string to local time given offset (hours)
+// Returns "HH:MM" or null
+function utcTimeToLocal(timeStr, dateStr, tzOffset) {
+  if (!timeStr || timeStr === 'null' || timeStr === '--:--:--') return null;
+  try {
+    const [h, m, s] = timeStr.split(':').map(Number);
+    const dt = new Date(`${dateStr}T${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00Z`);
+    dt.setMinutes(dt.getMinutes() + tzOffset * 60);
+    return String(dt.getUTCHours()).padStart(2,'0') + ':' + String(dt.getUTCMinutes()).padStart(2,'0');
+  } catch(e) { return null; }
+}
+
+// Get cached moon data for a day, or null
+function getCachedMoon(year, month, day) {
+  const pad = n => String(n).padStart(2, '0');
+  const key = `${year}-${pad(month)}-${pad(day)}`;
+  return moonCache[key] || null;
+}
+
 // ═══════════════════════════════════════════════════════
 //  UI INIT
 // ═══════════════════════════════════════════════════════
 function initControls() {
+  // Month select
   const sel = document.getElementById('monthSelect');
   MONTH_NAMES_UK.forEach((m, i) => {
     const opt = document.createElement('option');
@@ -718,7 +1040,6 @@ function initControls() {
   });
   sel.value = currentMonth;
   document.getElementById('yearInput').value = currentYear;
-
   sel.addEventListener('change', () => { currentMonth = +sel.value; renderCalendar(); });
   document.getElementById('yearInput').addEventListener('change', e => {
     let v = parseInt(e.target.value);
@@ -728,6 +1049,79 @@ function initControls() {
     currentYear = v;
     renderCalendar();
   });
+
+  // UTC select with city names
+  const UTC_ZONES = [
+    { h: -12, label: 'UTC-12 — Лінія дати (Захід)' },
+    { h: -11, label: 'UTC-11 — Самоа, Мідвей' },
+    { h: -10, label: 'UTC-10 — Гаваї (Гонолулу)' },
+    { h: -9,  label: 'UTC-9 — Аляска (Анкоридж)' },
+    { h: -8,  label: 'UTC-8 — Лос-Анджелес, Сан-Франциско' },
+    { h: -7,  label: 'UTC-7 — Денвер, Фенікс' },
+    { h: -6,  label: 'UTC-6 — Чикаго, Мехіко, Даллас' },
+    { h: -5,  label: 'UTC-5 — Нью-Йорк, Торонто, Мансаус' },
+    { h: -4,  label: 'UTC-4 — Галіфакс, Каракас, Ла-Пас' },
+    { h: -3,  label: 'UTC-3 — Буенос-Айрес, Бразиліа' },
+    { h: -2,  label: 'UTC-2 — Середня Атлантика' },
+    { h: -1,  label: 'UTC-1 — Азорські острови' },
+    { h:  0,  label: 'UTC+0 — Лондон, Лісабон, Дублін' },
+    { h:  1,  label: 'UTC+1 — Берлін, Париж, Варшава, Рим' },
+    { h:  2,  label: 'UTC+2 — Київ (зима), Афіни, Каїр, Рига' },
+    { h:  3,  label: 'UTC+3 — Київ (літо), Стамбул, Ер-Ріяд' },
+    { h:  4,  label: 'UTC+4 — Дубай, Баку, Тбілісі' },
+    { h:  5,  label: 'UTC+5 — Ташкент, Карачі, Єкатеринбург' },
+    { h:  5.5,label: 'UTC+5:30 — Мумбаї, Делі, Колката' },
+    { h:  6,  label: 'UTC+6 — Алмати, Дакка, Омськ' },
+    { h:  7,  label: 'UTC+7 — Бангкок, Джакарта, Новосибірськ' },
+    { h:  8,  label: 'UTC+8 — Пекін, Сінгапур, Гонконг' },
+    { h:  9,  label: 'UTC+9 — Токіо, Сеул, Якутськ' },
+    { h:  9.5,label: 'UTC+9:30 — Аделаїда, Дарвін' },
+    { h: 10,  label: 'UTC+10 — Сідней, Мельбурн, Владивосток' },
+    { h: 11,  label: 'UTC+11 — Нова Каледонія, Магадан' },
+    { h: 12,  label: 'UTC+12 — Окленд, Фіджі' },
+    { h: 13,  label: 'UTC+13 — Нукуалофа, Апіа (літо)' },
+    { h: 14,  label: 'UTC+14 — Лінія дат (Схід, Кірітіматі)' },
+  ];
+
+  const utcSel = document.getElementById('utcSelect');
+  UTC_ZONES.forEach(z => {
+    const opt = document.createElement('option');
+    opt.value = z.h;
+    opt.textContent = z.label;
+    utcSel.appendChild(opt);
+  });
+
+  // Auto-detect browser timezone and pick closest zone
+  const browserTZ = getBrowserTZ();
+  userTZ = null; // start in auto mode
+  // Find closest zone value
+  let closestVal = UTC_ZONES.reduce((prev, cur) =>
+    Math.abs(cur.h - browserTZ) < Math.abs(prev.h - browserTZ) ? cur : prev
+  ).h;
+  utcSel.value = closestVal;
+  updateUtcLabel(true);
+}
+
+function onUtcChange() {
+  const v = parseFloat(document.getElementById('utcSelect').value);
+  const browserTZ = getBrowserTZ();
+  // If user picked the zone closest to their browser TZ, treat as auto
+  if (Math.abs(v - browserTZ) < 0.6) {
+    userTZ = null;
+    updateUtcLabel(true);
+  } else {
+    userTZ = v;
+    updateUtcLabel(false);
+  }
+  renderCalendar();
+}
+
+function updateUtcLabel(isAuto) {
+  const lbl = document.getElementById('utcAutoLabel');
+  if (lbl) {
+    lbl.textContent = isAuto ? 'авто' : 'вручну';
+    lbl.style.color = isAuto ? 'var(--accent-teal)' : 'var(--gold)';
+  }
 }
 
 function goToday() {
@@ -774,18 +1168,50 @@ function getFirstDayOfWeek(year, month) {
 function getMonthMoonStats(year, month) {
   const days = getDaysInMonth(year, month);
   let newMoons = [], fullMoons = [];
+  let bestFullDay = null, bestFullDist = 1;
+  let bestNewDay = null, bestNewDist = 1;
   for (let d = 1; d <= days; d++) {
     const info = getLunarInfo(year, month, d);
-    if (info.phase < 0.033 || info.phase > 0.97) newMoons.push(d);
-    if (info.phase > 0.47 && info.phase < 0.53) fullMoons.push(d);
+    // New moon: closest to phase=0
+    const newDist = Math.min(info.phase, 1 - info.phase);
+    if (newDist < 0.05 && newDist < bestNewDist) { bestNewDist = newDist; bestNewDay = d; }
+    // Full moon: closest to phase=0.5
+    const fullDist = Math.abs(info.phase - 0.5);
+    if (fullDist < 0.05 && fullDist < bestFullDist) { bestFullDist = fullDist; bestFullDay = d; }
   }
+  if (bestNewDay) newMoons.push(bestNewDay);
+  if (bestFullDay) fullMoons.push(bestFullDay);
   return { newMoons, fullMoons };
 }
 
-function renderCalendar() {
+async function renderCalendar() {
   const container = document.getElementById('calendarContainer');
+  container.innerHTML = '<div class="loading">Завантаження місячних даних з API…</div>';
   const year = currentYear;
   const month = currentMonth;
+
+  // Fetch moonrise/moonset from API for this month (if not already cached)
+  const pad = n => String(n).padStart(2, '0');
+  const firstKey = `${year}-${pad(month)}-01`;
+  if (!moonCache[firstKey]) {
+    await fetchMoonData(year, month);
+    // Also fetch adjacent months for border accuracy
+    const prevDate = new Date(year, month - 2, 1);
+    const nextDate = new Date(year, month, 1);
+    await fetchMoonData(prevDate.getFullYear(), prevDate.getMonth() + 1);
+    await fetchMoonData(nextDate.getFullYear(), nextDate.getMonth() + 1);
+  }
+  // Also ensure the new moon's calendar month is cached (needed for nmAdjust calculation)
+  // Find NM for mid-month and fetch its month if different
+  const midMonthNM = prevNewMoon(toJD(year, month, 15, 12 - getEffectiveTZ(year, month, 15)));
+  const nmMidLocal = midMonthNM + getEffectiveTZ(year, month, 15) / 24;
+  const nmMidDate  = new Date((Math.floor(nmMidLocal + 0.5) - 2440587.5) * 86400000);
+  const nmMidMonth = nmMidDate.getUTCMonth() + 1;
+  const nmMidYear  = nmMidDate.getUTCFullYear();
+  const nmMidKey   = `${nmMidYear}-${pad(nmMidMonth)}-01`;
+  if (!moonCache[nmMidKey]) {
+    await fetchMoonData(nmMidYear, nmMidMonth);
+  }
   const daysInMonth = getDaysInMonth(year, month);
   const firstDow = getFirstDayOfWeek(year, month);
   const stats = getMonthMoonStats(year, month);
@@ -803,7 +1229,7 @@ function renderCalendar() {
       <div class="moon-stat"><div class="moon-stat-val">🌑 ${stats.newMoons.length > 0 ? stats.newMoons[0] + ' ' + MONTH_NAMES_UK[month-1] : '—'}</div><div class="moon-stat-lbl">Новий Місяць</div></div>
       <div class="moon-stat"><div class="moon-stat-val">🌕 ${stats.fullMoons.length > 0 ? stats.fullMoons[0] + ' ' + MONTH_NAMES_UK[month-1] : '—'}</div><div class="moon-stat-lbl">Повний Місяць</div></div>
       <div class="moon-stat"><div class="moon-stat-val">${daysInMonth}</div><div class="moon-stat-lbl">Днів у місяці</div></div>
-      <div class="moon-stat"><div class="moon-stat-val">🇺🇦 UTC+${isUkraineSummerTime(year,month,15)?3:2}</div><div class="moon-stat-lbl">Часовий пояс</div></div>
+      <div class="moon-stat"><div class="moon-stat-val" id="tzBannerVal">🌍 UTC${getEffectiveTZ(year,month,15)>=0?'+':''}${getEffectiveTZ(year,month,15)}</div><div class="moon-stat-lbl">Часовий пояс</div></div>
     </div>
   `;
 
@@ -840,7 +1266,8 @@ function renderCalendar() {
     const phaseInfo = getPhaseName(lunarInfo.phase);
     const zodiac = getMoonZodiac(lunarInfo.jd);
     const moonTimes = getMoonTimes(year, month, d);
-    const lunarDayData = LUNAR_DAYS[lunarInfo.lunarDay - 1] || LUNAR_DAYS[0];
+    const lunarDayData = LUNAR_DAYS[lunarInfo.mainLD - 1] || LUNAR_DAYS[0];
+    const secData      = LUNAR_DAYS[lunarInfo.secLD  - 1] || LUNAR_DAYS[0];
     const isToday = isCurrentMonth && d === today.getDate();
     const isSelected = selectedDay && selectedDay.d === d && selectedDay.m === month && selectedDay.y === year;
 
@@ -850,12 +1277,25 @@ function renderCalendar() {
     };
     const dotColor = catColors[lunarDayData.cat] || '#888';
 
+    // Secondary badge: position & time label
+    const fmtH = h => h !== null ? String(Math.floor(h)).padStart(2,'0')+':'+String(Math.round((h%1)*60)).padStart(2,'0') : '…';
+    const badgePos  = lunarInfo.mainIsFirst ? 'bottom' : 'top';
+    // Badge time: if main=earlyLD (mainIsFirst), secondary=lateLD starts at moonrise "з HH:MM"
+    // if main=lateLD, secondary=earlyLD ends at moonrise "до HH:MM"
+    const badgeTime = lunarInfo.changeHour !== null
+      ? (lunarInfo.mainIsFirst ? 'з ' + fmtH(lunarInfo.changeHour) : 'до ' + fmtH(lunarInfo.changeHour))
+      : '…';
+
     html += `<div class="day-cell ${phaseInfo.cls} ${isToday?'today':''} ${isSelected?'selected':''}"
       onclick="openDetail(${d},${month},${year})"
-      title="День ${d} | Місячний день ${lunarInfo.lunarDay}: ${lunarDayData.name}">
+      title="День ${d} | Місячний день ${lunarInfo.mainLD}: ${lunarDayData.name}">
+      <div class="sec-badge ${badgePos}">
+        <span class="sec-badge-icon">${secData.icon}</span>
+        <span class="sec-badge-time">${badgeTime}</span>
+      </div>
       <div class="greg-date">${d}</div>
       <div class="moon-phase-icon">${phaseInfo.icon}</div>
-      <div class="lunar-day-num">🌙${lunarInfo.lunarDay}</div>
+      <div class="lunar-day-num">🌙${lunarInfo.mainLD}</div>
       <div class="symbol-icon">${lunarDayData.icon}</div>
       <div class="symbol-name">${lunarDayData.name}</div>
       <div class="zodiac-sign" title="${zodiac.name}">${zodiac.icon}</div>
@@ -899,7 +1339,8 @@ function openDetail(day, month, year) {
   const phaseInfo = getPhaseName(lunarInfo.phase);
   const zodiac = getMoonZodiac(lunarInfo.jd);
   const moonTimes = getMoonTimes(year, month, day);
-  const lunarDayData = LUNAR_DAYS[lunarInfo.lunarDay - 1] || LUNAR_DAYS[0];
+  const lunarDayData = LUNAR_DAYS[lunarInfo.mainLD - 1] || LUNAR_DAYS[0];
+  const secDayData   = LUNAR_DAYS[lunarInfo.secLD  - 1] || LUNAR_DAYS[0];
 
   const catLabels = {
     money:'💰 Гроші та достаток', spirit:'🔮 Духовність',
@@ -908,6 +1349,7 @@ function openDetail(day, month, year) {
   };
 
   const illumination = Math.round(Math.sin(lunarInfo.phase * Math.PI) * 100);
+  const fmtH = h => h !== null && h !== undefined ? String(Math.floor(h)).padStart(2,'0')+':'+String(Math.round((h%1)*60)).padStart(2,'0') : '—';
 
   document.getElementById('detailContent').innerHTML = `
     <div class="detail-date">
@@ -916,9 +1358,17 @@ function openDetail(day, month, year) {
     <div class="detail-symbol-row">
       <div class="detail-icon">${lunarDayData.icon}</div>
       <div class="detail-symbol-info">
-        <div class="detail-lunar-num">${lunarInfo.lunarDay}-й місячний день</div>
+        <div class="detail-lunar-num">${lunarInfo.mainLD}-й місячний день</div>
         <div class="detail-symbol-title">${lunarDayData.name}</div>
         <div class="detail-phase">${phaseInfo.icon} ${phaseInfo.name}</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;background:rgba(200,168,75,0.04);border:1px solid rgba(200,168,75,0.12);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:0.8rem;">
+      <span style="font-size:1.4rem;">${secDayData.icon}</span>
+      <div>
+        <div style="color:var(--text-dim);font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;">Також цього дня</div>
+        <div style="color:var(--silver-light);">${lunarInfo.secLD}-й день · ${secDayData.name}</div>
+        <div style="color:var(--gold);font-size:0.7rem;">${lunarInfo.mainIsFirst ? "з " + fmtH(lunarInfo.changeHour) : "до " + fmtH(lunarInfo.changeHour)}</div>
       </div>
     </div>
     <div class="detail-grid">
@@ -965,8 +1415,11 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════
-initControls();
-renderCalendar();
+(async () => {
+  initControls();
+  await detectLocation();
+  await renderCalendar();
+})();
 </script>
 </body>
 </html>
